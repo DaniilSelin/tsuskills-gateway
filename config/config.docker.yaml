@@ -1,0 +1,69 @@
+server:
+  host: 0.0.0.0
+  port: 8000
+  ReadTimeout: 30s
+  WriteTimeout: 30s
+  IdleTimeout: 120s
+  ShutDownTimeOut: 30s
+
+jwt:
+  secret_key: "change-me-in-production-min-32-chars!"
+
+cors:
+  allowed_origins:
+    - "*"
+  allowed_methods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowed_headers:
+    - "Content-Type"
+    - "Authorization"
+    - "X-Request-ID"
+  max_age: 86400
+
+services:
+  users:
+    url: "http://users-service:8081"
+    prefix: "/api/v1/users"
+    strip_prefix: false
+  vacancies:
+    url: "http://dbmanager-service:8080"
+    prefix: "/api/v1/vacancies"
+    strip_prefix: false
+  skills:
+    url: "http://skills-service:8082"
+    prefix: "/api/v1/skills"
+    strip_prefix: false
+  organizations:
+    url: "http://skills-service:8082"
+    prefix: "/api/v1/organizations"
+    strip_prefix: false
+  resumes:
+    url: "http://skills-service:8082"
+    prefix: "/api/v1/resumes"
+    strip_prefix: false
+  applications:
+    url: "http://skills-service:8082"
+    prefix: "/api/v1/applications"
+    strip_prefix: false
+
+public_paths:
+  - "/api/v1/users/register"
+  - "/api/v1/users/login"
+  - "/api/v1/users/refresh"
+  - "/health"
+
+logger:
+  logger:
+    Level: "info"
+    Development: false
+    Encoding: "json"
+    OutputPaths: ["stdout"]
+    ErrorOutputPaths: ["stderr"]
+    EncoderConfig:
+      MessageKey: "message"
+      LevelKey: "level"
+      TimeKey: "timestamp"
