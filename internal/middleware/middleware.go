@@ -26,24 +26,52 @@ func RequestID(next http.Handler) http.Handler {
 	})
 }
 
-// CORS обрабатывает preflight и устанавливает заголовки
+// CORS обрабатывает preflight и устанавливает заголовки.
+// Это ЕДИНСТВЕННОЕ место в системе, где выставляется CORS.
+// Backend-сервисы тоже ставят CORS-заголовки, но proxy.ModifyResponse их удаляет.
 func CORS(cfg config.CORSConfig) func(http.Handler) http.Handler {
-	origins := strings.Join(cfg.AllowedOrigins, ", ")
 	methods := strings.Join(cfg.AllowedMethods, ", ")
 	headers := strings.Join(cfg.AllowedHeaders, ", ")
 	maxAge := fmt.Sprintf("%d", cfg.MaxAge)
 
+	// Проверяем, разрешён ли wildcard
+	allowAll := len(cfg.AllowedOrigins) == 1 && cfg.AllowedOrigins[0] == "*"
+
+	// Для быстрого поиска конкретных origin-ов
+	originSet := make(map[string]bool, len(cfg.AllowedOrigins))
+	for _, o := range cfg.AllowedOrigins {
+		originSet[o] = true
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", origins)
+			origin := r.Header.Get("Origin")
+
+			// Определяем, какой Origin вернуть
+			if origin != "" {
+				if allowAll {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+				} else if originSet[origin] {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+				}
+				// Vary: Origin — обязательно когда не wildcard "*"
+				w.Header().Add("Vary", "Origin")
+			} else {
+				// Без Origin (не-браузерный запрос) — просто пропускаем
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			}
+
 			w.Header().Set("Access-Control-Allow-Methods", methods)
 			w.Header().Set("Access-Control-Allow-Headers", headers)
 			w.Header().Set("Access-Control-Max-Age", maxAge)
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
 
+			// Preflight — сразу отвечаем 204, не проксируем
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
+
 			next.ServeHTTP(w, r)
 		})
 	}

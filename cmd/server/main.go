@@ -35,15 +35,16 @@ func main() {
 
 	r := mux.NewRouter()
 
-	// Middleware chain (порядок имеет значение):
-	// 1. Recovery — ловит паники
-	// 2. RequestID — генерирует ID запроса
-	// 3. CORS — обрабатывает preflight
+	// Middleware chain (gorilla/mux: первый Use = самый внешний wrapper):
+	// 1. Recovery — ловит паники, внешний
+	// 2. CORS — ОБЯЗАТЕЛЬНО до всего остального, чтобы preflight (OPTIONS)
+	//    получал CORS-заголовки и 204, не проходя через JWT/Logging
+	// 3. RequestID — генерирует ID запроса
 	// 4. Logging — логирует запрос
-	// 5. JWTAuth — проверяет токен (пропускает публичные пути)
+	// 5. JWTAuth — проверяет токен (пропускает OPTIONS и публичные пути)
 	r.Use(middleware.Recovery(appLogger))
-	r.Use(middleware.RequestID)
 	r.Use(middleware.CORS(cfg.CORS))
+	r.Use(middleware.RequestID)
 	r.Use(middleware.Logging(appLogger))
 	r.Use(middleware.JWTAuth(cfg.JWT.SecretKey, cfg.PublicPaths, appLogger))
 

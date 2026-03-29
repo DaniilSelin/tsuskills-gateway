@@ -59,6 +59,18 @@ func newProxy(target *url.URL, svc config.ServiceTarget, log logger.Logger) *htt
 		r.Host = target.Host
 	}
 
+	// Удаляем CORS-заголовки из ответов upstream-сервисов —
+	// CORS обрабатывается только на уровне gateway.
+	// Без этого браузер получает двойной Access-Control-Allow-Origin и отклоняет запрос.
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		resp.Header.Del("Access-Control-Allow-Origin")
+		resp.Header.Del("Access-Control-Allow-Methods")
+		resp.Header.Del("Access-Control-Allow-Headers")
+		resp.Header.Del("Access-Control-Max-Age")
+		resp.Header.Del("Access-Control-Allow-Credentials")
+		return nil
+	}
+
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		log.Error(r.Context(), "Proxy error",
 			zap.String("target", target.String()),
