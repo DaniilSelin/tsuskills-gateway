@@ -1,5 +1,6 @@
 FROM golang:1.23-alpine AS builder
 WORKDIR /app
+RUN apk --no-cache add ca-certificates git
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
